@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure File Courier</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body class="bg-gray-900 text-gray-100 font-sans min-h-screen flex flex-col items-center p-4">
+
+    <header class="w-full max-w-2xl mb-8 border-b border-gray-700 pb-4">
+        <h1 class="text-3xl font-bold text-blue-400">Secure File Courier</h1>
+        <p class="text-sm text-gray-400">Ephemeral, Trustless File Transfer</p>
+    </header>
+
+    <main class="w-full max-w-2xl space-y-8">
+
+        <!-- MODE SWITCHER -->
+        <div class="flex space-x-4 bg-gray-800 p-2 rounded-lg justify-center">
+            <button onclick="switchMode('courier')" id="btn-courier" class="px-6 py-2 rounded bg-blue-600 text-white font-semibold hover:bg-blue-500 transition">
+                Sender (Courier)
+            </button>
+            <button onclick="switchMode('receiver')" id="btn-receiver" class="px-6 py-2 rounded bg-gray-700 text-gray-300 font-semibold hover:bg-gray-600 transition">
+                Receiver (User)
+            </button>
+        </div>
+
+        <!-- COURIER VIEW -->
+        <section id="view-courier" class="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-xl">
+            <h2 class="text-xl font-semibold mb-4 text-green-400">1. Upload & Mint Ticket</h2>
+            
+            <div class="space-y-4">
+                <input type="file" id="fileInput" class="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-900 file:text-blue-300 hover:file:bg-blue-800"/>
+                
+                <button onclick="mintTicket()" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-lg transition">
+                    Generate Secure QR Code
+                </button>
+            </div>
+
+            <div id="qr-container" class="hidden mt-8 flex flex-col items-center bg-white p-4 rounded-lg">
+                <div id="qrcode"></div>
+                <p class="text-gray-900 text-sm mt-2 font-mono" id="ticket-url-display"></p>
+                <p class="text-gray-600 text-xs mt-1">Scan with Receiver Device</p>
+            </div>
+        </section>
+
+        <!-- RECEIVER VIEW -->
+        <section id="view-receiver" class="hidden bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-xl">
+            <h2 class="text-xl font-semibold mb-4 text-purple-400">2. Claim & Decrypt</h2>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">Simulate QR Scan (Paste URL or Ticket ID)</label>
+                    <input type="text" id="claimInput" placeholder="Enter Ticket URL..." class="w-full bg-gray-900 border border-gray-600 rounded p-3 text-white focus:border-purple-500 focus:outline-none font-mono text-sm">
+                </div>
+
+                <div class="p-4 bg-gray-900 rounded border border-gray-700 text-xs text-gray-400 font-mono space-y-1">
+                    <p>Status: <span id="status-text" class="text-yellow-500">Waiting for input...</span></p>
+                </div>
+
+                <button onclick="claimFile()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 rounded-lg transition">
+                    Generate Keys & Download
+                </button>
+            </div>
+
+            <div id="download-area" class="hidden mt-6 text-center">
+                <a id="download-link" href="#" class="inline-block px-6 py-3 bg-blue-500 text-white rounded font-bold hover:bg-blue-400">
+                    Save Decrypted File
+                </a>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        const API_BASE = 'http://localhost:8787'; // Worker Address
+
+        function switchMode(mode) {
+            document.getElementById('view-courier').classList.add('hidden');
+            document.getElementById('view-receiver').classList.add('hidden');
+            document.getElementById('btn-courier').classList.replace('bg-blue-600', 'bg-gray-700');
+            document.getElementById('btn-receiver').classList.replace('bg-blue-600', 'bg-gray-700');
+
+            if(mode === 'courier') {
+                document.getElementById('view-courier').classList.remove('hidden');
+                document.getElementById('btn-courier').classList.replace('bg-gray-700', 'bg-blue-600');
+            } else {
+                document.getElementById('view-receiver').classList.remove('hidden');
+                document.getElementById('btn-receiver').classList.replace('bg-gray-700', 'bg-blue-600');
+            }
+        }
+
+        // --- COURIER LOGIC ---
+        async function mintTicket() {
+            const fileInput = document.getElementById('fileInput');
+            if(fileInput.files.length === 0) return alert("Select a file first");
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                const res = await fetch(`${API_BASE}/api/mint`, { method: 'POST', body: formData });
+                const data = await res.json();
+                
+                if(data.claim_url) {
+                    document.getElementById('qr-container').classList.remove('hidden');
+                    document.getElementById('qrcode').innerHTML = "";
+                    new QRCode(document.getElementById("qrcode"), data.claim_url);
+                    document.getElementById('ticket-url-display').textContent = data.claim_url;
+                    
+                    // Auto-fill receiver for demo convenience
+                    document.getElementById('claimInput').value = data.claim_url;
+                }
+            } catch(e) {
+                alert("Error minting ticket: " + e.message);
+            }
+        }
+
+        // --- RECEIVER LOGIC ---
+        async function claimFile() {
+            const input = document.getElementById('claimInput').value;
+            const status = document.getElementById('status-text');
+            
+            try {
+                const url = new URL(input);
+                const ticketId = url.searchParams.get('ticket_id');
+                
+                if(!ticketId) throw new Error("Invalid URL: missing ticket_id");
+
+                status.textContent = "1. Generating RSA-OAEP KeyPair...";
+                const keyPair = await window.crypto.subtle.generateKey(
+                    {
+                        name: "RSA-OAEP",
+                        modulusLength: 2048,
+                        publicExponent: new Uint8Array([1, 0, 1]),
+                        hash: "SHA-256",
+                    },
+                    true,
+                    ["encrypt", "decrypt"]
+                );
+
+                status.textContent = "2. Exporting Public Key...";
+                const publicKeyJWK = await window.crypto.subtle.exportKey("jwk", keyPair.publicKey);
+
+                status.textContent = "3. Sending Request (Ticket + Public Key)...";
+                const res = await fetch(`${API_BASE}/api/claim`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        ticket_id: ticketId,
+                        public_key: publicKeyJWK
+                    })
+                });
+
+                if(!res.ok) throw new Error(await res.text());
+                const data = await res.json();
+
+                status.textContent = "4. Decrypting Session Key...";
+                const encryptedKey = base64ToArrayBuffer(data.wrapped_key);
+                const decryptedAesKey = await window.crypto.subtle.decrypt(
+                    { name: "RSA-OAEP" },
+                    keyPair.privateKey,
+                    encryptedKey
+                );
+                
+                // Import the raw AES key back into a CryptoKey object
+                const aesKeyObj = await window.crypto.subtle.importKey(
+                    "raw",
+                    decryptedAesKey,
+                    { name: "AES-GCM" },
+                    true,
+                    ["encrypt", "decrypt"]
+                );
+
+                status.textContent = "5. Decrypting File Content...";
+                const iv = base64ToArrayBuffer(data.iv);
+                const encryptedFile = base64ToArrayBuffer(data.encrypted_file);
+
+                const decryptedFileBuffer = await window.crypto.subtle.decrypt(
+                    { name: "AES-GCM", iv: iv },
+                    aesKeyObj,
+                    encryptedFile
+                );
+
+                status.textContent = "Success! Creating download link.";
+                
+                const blob = new Blob([decryptedFileBuffer], { type: data.mime_type });
+                const downloadUrl = URL.createObjectURL(blob);
+                const link = document.getElementById('download-link');
+                link.href = downloadUrl;
+                link.download = `decrypted-file-${Date.now()}`;
+                document.getElementById('download-area').classList.remove('hidden');
+
+            } catch(e) {
+                status.textContent = "Error: " + e.message;
+                status.classList.replace('text-yellow-500', 'text-red-500');
+                console.error(e);
+            }
+        }
+
+        function base64ToArrayBuffer(base64) {
+            const binaryString = window.atob(base64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+    </script>
+</body>
+</html>
