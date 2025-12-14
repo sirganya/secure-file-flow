@@ -1,0 +1,22 @@
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+pnpm-debug.log
+
+# System
+.DS_Store
+Thumbs.db
+
+# Cloudflare / Wrangler
+.wrangler/
+.dev.vars
+dist/
+worker/dist/
+
+# Vite / Client
+client/dist/
+client/.env.local
+
+# TypeScript
+*.tsbuildinfo
