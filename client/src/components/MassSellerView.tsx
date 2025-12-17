@@ -128,6 +128,9 @@ export function MassSellerView({ apiBase, wsBase }: MassSellerViewProps) {
 					<p className="mt-4 text-xs text-gray-500">
 						Scan to claim. QR will auto-advance.
 					</p>
+					<p className="mt-2 text-xs text-yellow-500 font-bold">
+						⚠️ Keep this tab open to dispense tickets
+					</p>
 				</div>
 			)}
 		</section>

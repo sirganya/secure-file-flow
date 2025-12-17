@@ -7,6 +7,16 @@ const app = new Hono<{ Bindings: Env }>();
 
 export { TicketDispenser };
 
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+	let binary = "";
+	const bytes = new Uint8Array(buffer);
+	const len = bytes.byteLength;
+	for (let i = 0; i < len; i++) {
+		binary += String.fromCharCode(bytes[i]);
+	}
+	return btoa(binary);
+}
+
 // Enable CORS for development (allowing Vite frontend to connect)
 app.use(
 	"/api/*",
@@ -26,16 +36,45 @@ app.post("/api/claim", claimTicket);
 
 // 1. Initialize (Seller)
 app.post("/api/mass/init", async (c) => {
+	console.log("Worker: /api/mass/init called");
 	const id = c.env.TICKET_DISPENSER.idFromName("GLOBAL_DEPOT");
 	const stub = c.env.TICKET_DISPENSER.get(id);
-	return stub.fetch(c.req.raw.clone());
+
+	const formData = await c.req.parseBody();
+	const file = formData.file;
+	const count = Number(formData.count) || 100;
+
+	if (!file || !(file instanceof File)) {
+		return c.json({ error: "File required" }, 400);
+	}
+
+	const contentBuffer = await file.arrayBuffer();
+	const base64Content = arrayBufferToBase64(contentBuffer);
+
+	const doReqBody = {
+		file: base64Content,
+		mimeType: file.type,
+		count: count,
+	};
+
+	console.log("Worker: forwarding JSON to DO");
+	const doReq = new Request("http://do/init", {
+		method: "POST",
+		body: JSON.stringify(doReqBody),
+		headers: { "Content-Type": "application/json" },
+	});
+
+	return stub.fetch(doReq);
 });
 
 // 2. WebSocket (Seller)
 app.get("/api/mass/ws", async (c) => {
 	const id = c.env.TICKET_DISPENSER.idFromName("GLOBAL_DEPOT");
 	const stub = c.env.TICKET_DISPENSER.get(id);
-	return stub.fetch(c.req.raw.clone());
+	// Rewrite URL to match DO expectation
+	const url = new URL(c.req.url);
+	url.pathname = "/ws";
+	return stub.fetch(new Request(url, c.req.raw));
 });
 
 // 3. Claim / Download (Client)
@@ -43,8 +82,12 @@ app.get("/api/mass/claim", async (c) => {
 	const id = c.env.TICKET_DISPENSER.idFromName("GLOBAL_DEPOT");
 	const stub = c.env.TICKET_DISPENSER.get(id);
 
-	// Fetch from DO (returns unencrypted stream or HTML waiting room)
-	const doRes = await stub.fetch(c.req.raw.clone());
+	// Rewrite URL
+	const url = new URL(c.req.url);
+	url.pathname = "/claim";
+
+	// Fetch from DO
+	const doRes = await stub.fetch(new Request(url, c.req.raw));
 
 	// If not a 200 OK file download, pass it through (e.g. 403, 404, or HTML waiting room)
 	if (doRes.status !== 200 || !doRes.headers.get("X-Ticket-ID")) {
@@ -90,7 +133,11 @@ app.get("/api/mass/claim", async (c) => {
 app.post("/api/mass/ack", async (c) => {
 	const id = c.env.TICKET_DISPENSER.idFromName("GLOBAL_DEPOT");
 	const stub = c.env.TICKET_DISPENSER.get(id);
-	return stub.fetch(c.req.raw.clone());
+
+	// Rewrite URL
+	const url = new URL(c.req.url);
+	url.pathname = "/ack";
+	return stub.fetch(new Request(url, c.req.raw));
 });
 
 export default app;
