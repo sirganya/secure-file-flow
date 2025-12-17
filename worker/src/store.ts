@@ -1,4 +1,4 @@
-import { TicketAsset } from './types';
+import type { TicketAsset } from "./types";
 
 // In-memory storage for demonstration
 // Note: In a real Cloudflare Worker, this Map clears on worker restart/eviction.

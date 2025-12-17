@@ -20,4 +20,4 @@ client/dist/
 client/.env.local
 
 # TypeScript
-*.tsbuildinfo
+*.tsbuildinfoworker/worker-configuration.d.ts
