@@ -13,6 +13,7 @@ export function MassSellerView({ apiBase, wsBase }: MassSellerViewProps) {
 	const [currentTicketId, setCurrentTicketId] = useState<string | null>(null);
 	const [wsConnected, setWsConnected] = useState(false);
 	const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+	const [origin, setOrigin] = useState(window.location.origin);
 	const wsRef = useRef<WebSocket | null>(null);
 
 	const handleMassInit = async () => {
@@ -69,12 +70,12 @@ export function MassSellerView({ apiBase, wsBase }: MassSellerViewProps) {
 	// QR Generation Effect
 	useEffect(() => {
 		if (currentTicketId) {
-			const url = `${window.location.origin}/?mass_ticket=${currentTicketId}`;
+			const url = `${origin}/?mass_ticket=${currentTicketId}`;
 			QRCode.toDataURL(url).then(setQrDataUrl);
 		} else {
 			setQrDataUrl(null);
 		}
-	}, [currentTicketId]);
+	}, [currentTicketId, origin]);
 
 	return (
 		<section className="w-full max-w-xl bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-xl text-center">
@@ -83,6 +84,17 @@ export function MassSellerView({ apiBase, wsBase }: MassSellerViewProps) {
 			</h2>
 			{!wsConnected ? (
 				<div className="space-y-4">
+					<div>
+						<label className="block text-xs text-gray-400 mb-1">
+							Public Origin (for QR)
+						</label>
+						<input
+							type="text"
+							value={origin}
+							onChange={(e) => setOrigin(e.target.value)}
+							className="w-full bg-gray-900 border border-gray-600 rounded p-2 text-white font-mono text-xs text-center"
+						/>
+					</div>
 					<input
 						type="file"
 						onChange={(e) => setFile(e.target.files?.[0] || null)}
