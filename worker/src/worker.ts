@@ -28,14 +28,14 @@ app.post("/api/claim", claimTicket);
 app.post("/api/mass/init", async (c) => {
 	const id = c.env.TICKET_DISPENSER.idFromName("GLOBAL_DEPOT");
 	const stub = c.env.TICKET_DISPENSER.get(id);
-	return stub.fetch(c.req.raw);
+	return stub.fetch(c.req.raw.clone());
 });
 
 // 2. WebSocket (Seller)
 app.get("/api/mass/ws", async (c) => {
 	const id = c.env.TICKET_DISPENSER.idFromName("GLOBAL_DEPOT");
 	const stub = c.env.TICKET_DISPENSER.get(id);
-	return stub.fetch(c.req.raw);
+	return stub.fetch(c.req.raw.clone());
 });
 
 // 3. Claim / Download (Client)
@@ -44,7 +44,7 @@ app.get("/api/mass/claim", async (c) => {
 	const stub = c.env.TICKET_DISPENSER.get(id);
 
 	// Fetch from DO (returns unencrypted stream or HTML waiting room)
-	const doRes = await stub.fetch(c.req.raw);
+	const doRes = await stub.fetch(c.req.raw.clone());
 
 	// If not a 200 OK file download, pass it through (e.g. 403, 404, or HTML waiting room)
 	if (doRes.status !== 200 || !doRes.headers.get("X-Ticket-ID")) {
@@ -90,7 +90,7 @@ app.get("/api/mass/claim", async (c) => {
 app.post("/api/mass/ack", async (c) => {
 	const id = c.env.TICKET_DISPENSER.idFromName("GLOBAL_DEPOT");
 	const stub = c.env.TICKET_DISPENSER.get(id);
-	return stub.fetch(c.req.raw);
+	return stub.fetch(c.req.raw.clone());
 });
 
 export default app;
