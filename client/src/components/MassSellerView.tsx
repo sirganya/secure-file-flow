@@ -14,7 +14,22 @@ export function MassSellerView({ apiBase, wsBase }: MassSellerViewProps) {
 	const [wsConnected, setWsConnected] = useState(false);
 	const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
 	const [origin, setOrigin] = useState(window.location.origin);
+	const [borderColor, setBorderColor] = useState("#ffffff");
 	const wsRef = useRef<WebSocket | null>(null);
+
+	const getRandomColor = () => {
+		const colors = [
+			"#EF4444", // Red
+			"#F59E0B", // Amber
+			"#10B981", // Emerald
+			"#3B82F6", // Blue
+			"#8B5CF6", // Violet
+			"#EC4899", // Pink
+			"#06B6D4", // Cyan
+			"#84CC16", // Lime
+		];
+		return colors[Math.floor(Math.random() * colors.length)];
+	};
 
 	const handleMassInit = async () => {
 		if (!file) return alert("Select file");
@@ -72,6 +87,7 @@ export function MassSellerView({ apiBase, wsBase }: MassSellerViewProps) {
 		if (currentTicketId) {
 			const url = `${origin}/?mass_ticket=${currentTicketId}`;
 			QRCode.toDataURL(url).then(setQrDataUrl);
+			setBorderColor(getRandomColor());
 		} else {
 			setQrDataUrl(null);
 		}
@@ -129,7 +145,10 @@ export function MassSellerView({ apiBase, wsBase }: MassSellerViewProps) {
 						Tickets in Queue: {massTickets.length}
 					</div>
 					{qrDataUrl ? (
-						<div className="bg-white p-8 rounded-lg">
+						<div
+							className="bg-white p-4 rounded-lg transition-colors duration-500"
+							style={{ border: `8px solid ${borderColor}` }}
+						>
 							<img src={qrDataUrl} alt="QR" className="w-64 h-64" />
 						</div>
 					) : (
