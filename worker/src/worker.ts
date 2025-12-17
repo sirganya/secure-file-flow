@@ -1,8 +1,11 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { TicketDispenser } from "./do/TicketDispenser";
 import { claimTicket, mintTicket } from "./routes/api";
 
 const app = new Hono<{ Bindings: Env }>();
+
+export { TicketDispenser };
 
 // Enable CORS for development (allowing Vite frontend to connect)
 app.use(
