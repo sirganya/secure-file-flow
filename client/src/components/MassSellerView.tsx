@@ -6,6 +6,21 @@ interface MassSellerViewProps {
 	wsBase: string;
 }
 
+const getRandomColor = (exclude?: string) => {
+	const colors = [
+		"#EF4444", // Red
+		"#F59E0B", // Amber
+		"#10B981", // Emerald
+		"#3B82F6", // Blue
+		"#8B5CF6", // Violet
+		"#EC4899", // Pink
+		"#06B6D4", // Cyan
+		"#84CC16", // Lime
+	];
+	const available = exclude ? colors.filter((c) => c !== exclude) : colors;
+	return available[Math.floor(Math.random() * available.length)];
+};
+
 export function MassSellerView({ apiBase, wsBase }: MassSellerViewProps) {
 	const [file, setFile] = useState<File | null>(null);
 	const [massCount, setMassCount] = useState(100);
@@ -16,20 +31,6 @@ export function MassSellerView({ apiBase, wsBase }: MassSellerViewProps) {
 	const [origin, setOrigin] = useState(window.location.origin);
 	const [borderColor, setBorderColor] = useState("#ffffff");
 	const wsRef = useRef<WebSocket | null>(null);
-
-	const getRandomColor = () => {
-		const colors = [
-			"#EF4444", // Red
-			"#F59E0B", // Amber
-			"#10B981", // Emerald
-			"#3B82F6", // Blue
-			"#8B5CF6", // Violet
-			"#EC4899", // Pink
-			"#06B6D4", // Cyan
-			"#84CC16", // Lime
-		];
-		return colors[Math.floor(Math.random() * colors.length)];
-	};
 
 	const handleMassInit = async () => {
 		if (!file) return alert("Select file");
@@ -63,21 +64,17 @@ export function MassSellerView({ apiBase, wsBase }: MassSellerViewProps) {
 			}
 			if (msg.type === "claimed") {
 				setMassTickets((prev) => prev.filter((t) => t !== msg.ticketId));
-				// If the claimed ticket was the current one, the effect below will advance it
 			}
 		};
 	};
 
 	// Auto-Advance Logic
 	useEffect(() => {
-		// If we have tickets but no current one, pick the first
 		if (massTickets.length > 0 && !currentTicketId) {
 			const next = massTickets[0];
 			setCurrentTicketId(next);
-		}
-		// If the current ticket is no longer in the list (claimed), pick the new first
-		else if (currentTicketId && !massTickets.includes(currentTicketId)) {
-			const next = massTickets[0]; // Could be undefined if empty
+		} else if (currentTicketId && !massTickets.includes(currentTicketId)) {
+			const next = massTickets[0];
 			setCurrentTicketId(next || null);
 		}
 	}, [massTickets, currentTicketId]);
@@ -87,7 +84,7 @@ export function MassSellerView({ apiBase, wsBase }: MassSellerViewProps) {
 		if (currentTicketId) {
 			const url = `${origin}/?mass_ticket=${currentTicketId}`;
 			QRCode.toDataURL(url).then(setQrDataUrl);
-			setBorderColor(getRandomColor());
+			setBorderColor((prev) => getRandomColor(prev));
 		} else {
 			setQrDataUrl(null);
 		}
@@ -103,13 +100,13 @@ export function MassSellerView({ apiBase, wsBase }: MassSellerViewProps) {
 					<div>
 						<label className="block text-xs text-gray-400 mb-1">
 							Public Origin (for QR)
+							<input
+								type="text"
+								value={origin}
+								onChange={(e) => setOrigin(e.target.value)}
+								className="w-full bg-gray-900 border border-gray-600 rounded p-2 text-white font-mono text-xs text-center mt-1"
+							/>
 						</label>
-						<input
-							type="text"
-							value={origin}
-							onChange={(e) => setOrigin(e.target.value)}
-							className="w-full bg-gray-900 border border-gray-600 rounded p-2 text-white font-mono text-xs text-center"
-						/>
 					</div>
 					<input
 						type="file"

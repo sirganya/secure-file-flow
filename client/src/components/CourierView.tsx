@@ -37,13 +37,13 @@ export function CourierView({ apiBase }: CourierViewProps) {
 				<div>
 					<label className="block text-xs text-gray-400 mb-1">
 						Public Origin (for QR)
+						<input
+							type="text"
+							value={origin}
+							onChange={(e) => setOrigin(e.target.value)}
+							className="w-full bg-gray-900 border border-gray-600 rounded p-2 text-white font-mono text-xs mt-1"
+						/>
 					</label>
-					<input
-						type="text"
-						value={origin}
-						onChange={(e) => setOrigin(e.target.value)}
-						className="w-full bg-gray-900 border border-gray-600 rounded p-2 text-white font-mono text-xs"
-					/>
 				</div>
 				<input
 					type="file"
